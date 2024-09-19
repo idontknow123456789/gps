@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS 页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            background-color: #b3e5fc;
+        }
+
+        h1 {
+            color: #f61111;
+            margin-top: 20px;
+        }
+
+        p {
+            font-size: 18px;
+            line-height: 1.6;
+        }
+
+        .center {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #map {
+            width: 100%;
+            height: 400px; /* 默认高度 */
+            max-width: 800px;
+            margin-bottom: 20px;
+        }
+
+        /* 返回主页面按钮样式 */
+        .back-button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .back-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* 媒体查询：手机屏幕 */
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 24px;
+            }
+
+            p {
+                font-size: 16px;
+            }
+
+            #map {
+                height: 300px; /* 在较小屏幕上调整地图高度 */
+            }
+
+            .buttons {
+                flex-direction: column; /* 在小屏幕上按钮垂直堆叠 */
+                gap: 5px;
+            }
+
+            button {
+                font-size: 14px;
+                padding: 8px 15px;
+            }
+
+            .back-button {
+                font-size: 14px;
+                padding: 8px 15px;
+            }
+        }
+    </style>
+    <!-- 引入 Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+</head>
+
+<body>
+    <a href="index.html" class="back-button">返回主頁</a> <!-- 返回主頁的按鈕 -->
+
+    <h1>GPS 實際位置</h1>
+    <p>連結 GPS 系統即可在此觀看實際位置</p>
+    <div class="center">
+        <div id="map"></div> <!-- 地圖的容器 -->
+        <div class="buttons">
+            <button id="connectBluetooth">連接藍牙</button>
+            <button id="updateImage">圖片更新</button>
+            <button id="screenshot">截圖</button>
+        </div>
+    </div>
+
+    <script>
+        let map, marker;
+
+        // 初始化地圖
+        function initMap() {
+            map = L.map('map').setView([22.642099, 120.597297], 18); // 初始地圖設定
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+                maxZoom: 19,
+                attribution: '© OpenStreetMap'
+            }).addTo(map);
+
+            marker = L.marker([22.642099, 120.597297]).addTo(map)
+                .bindPopup('等待 GPS 座標...')
+                .openPopup();
+        }
+
+        // 更新地圖上的 GPS 資料
+        function updateMap(lat, lng) {
+            const gpsCoordinates = [lat, lng];
+            map.setView(gpsCoordinates, 18);  // 更新地圖中心
+            marker.setLatLng(gpsCoordinates);  // 移動標記
+            marker.bindPopup(`你的位置: (${lat}, ${lng})`).openPopup();
+        }
+
+        // 連接藍牙並接收 GPS 資料
+        document.getElementById('connectBluetooth').addEventListener('click', async () => {
+    try {
+        const device = await navigator.bluetooth.requestDevice({
+            filters: [{ name: 'ESP32_GPS' }], // 確保這裡的名稱與您的 ESP32 BLE 名稱匹配
+            optionalServices: ['e84f661a-99e2-4b26-b9b7-5d7858660eae'] // 使用您在 ESP32 中設置的服務 UUID
+        });
+
+        const server = await device.gatt.connect();
+        const service = await server.getPrimaryService('e84f661a-99e2-4b26-b9b7-5d7858660eae'); // 確保這裡的 UUID 與您的服務 UUID 匹配
+        const characteristic = await service.getCharacteristic('beb5483e-36e1-4688-b7f5-ea07361b26a8'); // 確保這裡的 UUID 與您的特徵 UUID 匹配
+
+        characteristic.startNotifications();
+        characteristic.addEventListener('characteristicvaluechanged', (event) => {
+            const value = new TextDecoder().decode(event.target.value);
+            console.log('收到 GPS 資料:', value);
+
+                    // 檢查是否收到有效的 GPS 資料並更新地圖
+                    if (value.includes("Location:")) {
+                        const gpsData = value.split("Location: ")[1].split("  Date/Time: ")[0];
+                        const [lat, lng] = gpsData.split(", ").map(Number);
+
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                            updateMap(lat, lng); // 更新地圖
+                        } else {
+                            console.error('GPS 座標解析錯誤');
+                        }
+                    } else {
+                        console.error('未接收到 GPS 座標');
+                    }
+                });
+            } catch (error) {
+                console.error('藍牙連接失敗:', error);
+            }
+        });
+
+        // 初始化地圖
+        window.onload = function () {
+            initMap();
+        };
+
+        // 截圖功能
+        document.getElementById('screenshot').addEventListener('click', function () {
+            setTimeout(function () {
+                html2canvas(document.body).then(function (canvas) {
+                    var link = document.createElement('a');
+                    link.href = canvas.toDataURL();
+                    link.download = 'screenshot.png';
+                    link.click();
+                }).catch(function (error) {
+                    console.error('截图失败:', error);
+                });
+            }, 1000);  // 延遲 1 秒，確保地圖已完全加載
+        });
+    </script>
+
+    <!-- 引入 Leaflet JS 和 html2canvas -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</body>
+
+</html>

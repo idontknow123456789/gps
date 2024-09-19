@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>安全帽页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            background-color: #9c9797; 
+        }
+
+        h1 {
+            color: #f61111;
+            margin-top: 20px;
+        }
+
+        p {
+            font-size: 18px;
+            line-height: 1.6;
+            
+        }
+
+        img {
+            width: 70%;
+            margin: 20px 0;
+        }
+
+        button {
+            margin: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>video</h1>
+    <p>連結攝影鏡頭 可在此觀看畫面</p>
+    <img src="picture.png" alt="Picture">
+    <br>
+    <button id="recordButton">螢幕錄影</button>
+    <button id="captureButton">拍照</button>
+    <button id="replayButton">回播</button>
+
+    <script>
+        let isRecording = false;
+
+        document.getElementById('recordButton').addEventListener('click', function () {
+            if (!isRecording) {
+                startRecording();
+                this.textContent = '停止錄影';
+            } else {
+                stopRecording();
+                this.textContent = '螢幕錄影';
+            }
+            isRecording = !isRecording;
+        });
+
+        document.getElementById('captureButton').addEventListener('click', function () {
+            capturePhoto();
+        });
+
+        document.getElementById('replayButton').addEventListener('click', function () {
+            window.location.href = 'picture.html';
+        });
+
+        function startRecording() {
+            console.log('Recording started...');
+            // 在這裡添加開始錄影的程式碼
+        }
+
+        function stopRecording() {
+            console.log('Recording stopped.');
+            // 在這裡添加停止錄影的程式碼
+        }
+
+        function capturePhoto() {
+            console.log('Photo captured.');
+            // 在這裡添加拍照的程式碼
+        }
+    </script>
+</body>
+
+</html>
