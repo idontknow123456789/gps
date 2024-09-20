@@ -46,12 +46,11 @@
 
         #map {
             width: 100%;
-            height: 400px; /* 默认高度 */
+            height: 400px;
             max-width: 800px;
             margin-bottom: 20px;
         }
 
-        /* 返回主页面按钮样式 */
         .back-button {
             position: absolute;
             top: 10px;
@@ -68,7 +67,6 @@
             background-color: #0056b3;
         }
 
-        /* 媒体查询：手机屏幕 */
         @media (max-width: 600px) {
             h1 {
                 font-size: 24px;
@@ -79,11 +77,11 @@
             }
 
             #map {
-                height: 300px; /* 在较小屏幕上调整地图高度 */
+                height: 300px;
             }
 
             .buttons {
-                flex-direction: column; /* 在小屏幕上按钮垂直堆叠 */
+                flex-direction: column;
                 gap: 5px;
             }
 
@@ -98,19 +96,18 @@
             }
         }
     </style>
-    <!-- 引入 Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
 
 <body>
-    <a href="index.html" class="back-button">返回主頁</a> <!-- 返回主頁的按鈕 -->
-
+    <a href="index.html" class="back-button">返回主頁</a>
     <h1>GPS 實際位置</h1>
     <p>連結 GPS 系統即可在此觀看實際位置</p>
     <div class="center">
-        <div id="map"></div> <!-- 地圖的容器 -->
+        <div id="map"></div>
         <div class="buttons">
             <button id="connectBluetooth">連接藍牙</button>
+            <button id="connectSerial">串口連接</button> <!-- 新增串口按鈕 -->
             <button id="updateImage">圖片更新</button>
             <button id="screenshot">截圖</button>
         </div>
@@ -119,9 +116,8 @@
     <script>
         let map, marker;
 
-        // 初始化地圖
         function initMap() {
-            map = L.map('map').setView([22.642099, 120.597297], 18); // 初始地圖設定
+            map = L.map('map').setView([22.642099, 120.597297], 18);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
                 maxZoom: 19,
                 attribution: '© OpenStreetMap'
@@ -132,38 +128,84 @@
                 .openPopup();
         }
 
-        // 更新地圖上的 GPS 資料
         function updateMap(lat, lng) {
             const gpsCoordinates = [lat, lng];
-            map.setView(gpsCoordinates, 18);  // 更新地圖中心
-            marker.setLatLng(gpsCoordinates);  // 移動標記
+            map.setView(gpsCoordinates, 18);
+            marker.setLatLng(gpsCoordinates);
             marker.bindPopup(`你的位置: (${lat}, ${lng})`).openPopup();
         }
 
-        // 連接藍牙並接收 GPS 資料
-        document.getElementById('connectBluetooth').addEventListener('click', async () => {
-    try {
-        const device = await navigator.bluetooth.requestDevice({
-            filters: [{ name: 'ESP32_GPS' }], // 確保這裡的名稱與您的 ESP32 BLE 名稱匹配
-            optionalServices: ['e84f661a-99e2-4b26-b9b7-5d7858660eae'] // 使用您在 ESP32 中設置的服務 UUID
-        });
+        // 串口連接功能
+        document.getElementById('connectSerial').addEventListener('click', async () => {
+            try {
+                const port = await navigator.serial.requestPort();
+                await port.open({ baudRate: 115200 });
 
-        const server = await device.gatt.connect();
-        const service = await server.getPrimaryService('e84f661a-99e2-4b26-b9b7-5d7858660eae'); // 確保這裡的 UUID 與您的服務 UUID 匹配
-        const characteristic = await service.getCharacteristic('beb5483e-36e1-4688-b7f5-ea07361b26a8'); // 確保這裡的 UUID 與您的特徵 UUID 匹配
+                const textDecoder = new TextDecoderStream();
+                const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+                const reader = textDecoder.readable.getReader();
 
-        characteristic.startNotifications();
-        characteristic.addEventListener('characteristicvaluechanged', (event) => {
-            const value = new TextDecoder().decode(event.target.value);
-            console.log('收到 GPS 資料:', value);
+                console.log('串口已連接');
 
-                    // 檢查是否收到有效的 GPS 資料並更新地圖
+                // 持续读取串口数据
+                while (true) {
+                    const { value, done } = await reader.read();
+                    if (done) {
+                        // 串口连接已关闭
+                        console.log('串口已關閉');
+                        break;
+                    }
+                    console.log('收到的串口數據:', value);
+                    
                     if (value.includes("Location:")) {
                         const gpsData = value.split("Location: ")[1].split("  Date/Time: ")[0];
                         const [lat, lng] = gpsData.split(", ").map(Number);
 
                         if (!isNaN(lat) && !isNaN(lng)) {
-                            updateMap(lat, lng); // 更新地圖
+                            updateMap(lat, lng);
+                        } else {
+                            console.error('GPS 座標解析錯誤');
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('串口連接失敗:', error);
+            }
+        });
+
+        // 蓝牙连接功能
+        document.getElementById('connectBluetooth').addEventListener('click', async () => {
+            try {
+                console.log('嘗試連接藍牙...');
+                const device = await navigator.bluetooth.requestDevice({
+                    filters: [{ name: 'ESP32_GPS' }],
+                    optionalServices: ['e84f661a-99e2-4b26-b9b7-5d7858660eae']
+                });
+
+                console.log('藍牙設備選擇成功:', device);
+
+                const server = await device.gatt.connect();
+                console.log('藍牙伺服器連接成功:', server);
+
+                const service = await server.getPrimaryService('e84f661a-99e2-4b26-b9b7-5d7858660eae');
+                console.log('藍牙服務獲取成功:', service);
+
+                const characteristic = await service.getCharacteristic('beb5483e-36e1-4688-b7f5-ea07361b26a8');
+                console.log('藍牙特徵獲取成功:', characteristic);
+
+                characteristic.startNotifications();
+                console.log('開始接收通知');
+
+                characteristic.addEventListener('characteristicvaluechanged', (event) => {
+                    const value = new TextDecoder().decode(event.target.value);
+                    console.log('收到 GPS 資料:', value);
+
+                    if (value.includes("Location:")) {
+                        const gpsData = value.split("Location: ")[1].split("  Date/Time: ")[0];
+                        const [lat, lng] = gpsData.split(", ").map(Number);
+
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                            updateMap(lat, lng);
                         } else {
                             console.error('GPS 座標解析錯誤');
                         }
@@ -171,17 +213,16 @@
                         console.error('未接收到 GPS 座標');
                     }
                 });
+
             } catch (error) {
                 console.error('藍牙連接失敗:', error);
             }
         });
 
-        // 初始化地圖
         window.onload = function () {
             initMap();
         };
 
-        // 截圖功能
         document.getElementById('screenshot').addEventListener('click', function () {
             setTimeout(function () {
                 html2canvas(document.body).then(function (canvas) {
@@ -192,11 +233,10 @@
                 }).catch(function (error) {
                     console.error('截图失败:', error);
                 });
-            }, 1000);  // 延遲 1 秒，確保地圖已完全加載
+            }, 1000);
         });
     </script>
 
-    <!-- 引入 Leaflet JS 和 html2canvas -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </body>
