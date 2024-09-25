@@ -107,7 +107,7 @@
         <div id="map"></div>
         <div class="buttons">
             <button id="connectBluetooth">連接藍牙</button>
-            <button id="connectSerial">串口連接</button> <!-- 新增串口按鈕 -->
+            <button id="connectSerial">串口連接</button>
             <button id="updateImage">圖片更新</button>
             <button id="screenshot">截圖</button>
         </div>
@@ -115,15 +115,17 @@
 
     <script>
         let map, marker;
+        const initialCenter = [22.642099, 120.597297];
+        const initialZoom = 18;
 
         function initMap() {
-            map = L.map('map').setView([22.642099, 120.597297], 18);
+            map = L.map('map').setView(initialCenter, initialZoom);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
                 maxZoom: 19,
                 attribution: '© OpenStreetMap'
             }).addTo(map);
 
-            marker = L.marker([22.642099, 120.597297]).addTo(map)
+            marker = L.marker(initialCenter).addTo(map)
                 .bindPopup('等待 GPS 座標...')
                 .openPopup();
         }
@@ -135,7 +137,6 @@
             marker.bindPopup(`你的位置: (${lat}, ${lng})`).openPopup();
         }
 
-        // 串口連接功能
         document.getElementById('connectSerial').addEventListener('click', async () => {
             try {
                 const port = await navigator.serial.requestPort();
@@ -147,11 +148,9 @@
 
                 console.log('串口已連接');
 
-                // 持续读取串口数据
                 while (true) {
                     const { value, done } = await reader.read();
                     if (done) {
-                        // 串口连接已关闭
                         console.log('串口已關閉');
                         break;
                     }
@@ -173,7 +172,6 @@
             }
         });
 
-        // 蓝牙连接功能
         document.getElementById('connectBluetooth').addEventListener('click', async () => {
             try {
                 console.log('嘗試連接藍牙...');
@@ -204,7 +202,7 @@
                         const gpsData = value.split("Location: ")[1].split("  Date/Time: ")[0];
                         const [lat, lng] = gpsData.split(", ").map(Number);
 
-                        if (!isNaN(lat) && !isNaN(lng)) {
+                        if (!isNaN(lat)&& !isNaN(lng)) {
                             updateMap(lat, lng);
                         } else {
                             console.error('GPS 座標解析錯誤');
@@ -217,6 +215,10 @@
             } catch (error) {
                 console.error('藍牙連接失敗:', error);
             }
+        });
+
+        document.getElementById('updateImage').addEventListener('click', function() {
+            updateMap(initialCenter[0], initialCenter[1]); // 重設地圖到初始位置
         });
 
         window.onload = function () {
