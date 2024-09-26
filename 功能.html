@@ -21,7 +21,6 @@
         p {
             font-size: 18px;
             line-height: 1.6;
-            
         }
 
         img {
@@ -46,6 +45,9 @@
     <button id="recordButton">螢幕錄影</button>
     <button id="captureButton">拍照</button>
     <button id="replayButton">回播</button>
+
+    <h1>照片列表</h1>
+    <ul id="photo-list"></ul>
 
     <script>
         let isRecording = false;
@@ -83,6 +85,14 @@
             console.log('Photo captured.');
             // 在這裡添加拍照的程式碼
         }
+
+        async function fetchPhotos() {
+            const response = await fetch('http://192.168.50.68/'); // ESP32-CAM IP 地址
+            const html = await response.text();
+            document.getElementById('photo-list').innerHTML = html;
+        }
+
+        fetchPhotos();
     </script>
 </body>
 
