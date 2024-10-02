@@ -10,90 +10,54 @@
             font-family: Arial, sans-serif;
             text-align: center;
             padding: 20px;
-            background-color: #9c9797; 
         }
-
+        
         h1 {
             color: #f61111;
             margin-top: 20px;
         }
-
+        
         p {
             font-size: 18px;
             line-height: 1.6;
         }
-
-        img {
-            width: 70%;
-            margin: 20px 0;
+        
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+            margin-top: 20px;
         }
-
-        button {
-            margin: 10px;
+        .back-button {
+            position: absolute;
+            top: 10px;
+            left: 10px;
             padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
             font-size: 16px;
-            cursor: pointer;
         }
+
+        .back-button:hover {
+            background-color: #0056b3;
+        }
+        .back-button {
+                font-size: 14px;
+                padding: 8px 15px;
+            }
+        
     </style>
 </head>
 
 <body>
-    <h1>video</h1>
-    <p>連結攝影鏡頭 可在此觀看畫面</p>
-    <img src="picture.png" alt="Picture">
-    <br>
-    <button id="recordButton">螢幕錄影</button>
-    <button id="captureButton">拍照</button>
-    <button id="replayButton">回播</button>
+    <a href="index.html" class="back-button">返回主頁</a>
+    <h1>gps</h1>
+    <p>連結ｃａｍ系統即可在此觀看攝影機</p>
 
-    <h1>照片列表</h1>
-    <ul id="photo-list"></ul>
-
-    <script>
-        let isRecording = false;
-
-        document.getElementById('recordButton').addEventListener('click', function () {
-            if (!isRecording) {
-                startRecording();
-                this.textContent = '停止錄影';
-            } else {
-                stopRecording();
-                this.textContent = '螢幕錄影';
-            }
-            isRecording = !isRecording;
-        });
-
-        document.getElementById('captureButton').addEventListener('click', function () {
-            capturePhoto();
-        });
-
-        document.getElementById('replayButton').addEventListener('click', function () {
-            window.location.href = 'picture.html';
-        });
-
-        function startRecording() {
-            console.log('Recording started...');
-            // 在這裡添加開始錄影的程式碼
-        }
-
-        function stopRecording() {
-            console.log('Recording stopped.');
-            // 在這裡添加停止錄影的程式碼
-        }
-
-        function capturePhoto() {
-            console.log('Photo captured.');
-            // 在這裡添加拍照的程式碼
-        }
-
-        async function fetchPhotos() {
-            const response = await fetch('http://192.168.50.68/'); // ESP32-CAM IP 地址
-            const html = await response.text();
-            document.getElementById('photo-list').innerHTML = html;
-        }
-
-        fetchPhotos();
-    </script>
+    <!-- 嵌入 Arduino 生成的网页 -->
+    <iframe src="http://192.168.50.68"></iframe>
 </body>
 
 </html>
